@@ -6,7 +6,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 from playlistgit.config import SpotifyConfig
-from playlistgit.models import Service, Track
+from playlistgit.models import RemotePlaylist, Service, Track
 
 
 SCOPES = "playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public"
@@ -60,6 +60,23 @@ class SpotifyAdapter:
     def display_name(self) -> str:
         profile = self.client.current_user()
         return profile.get("display_name") or profile.get("id") or "Spotify user"
+
+    def list_playlists(self) -> list[RemotePlaylist]:
+        playlists: list[RemotePlaylist] = []
+        response = self.client.current_user_playlists(limit=50)
+        while response:
+            for raw in response.get("items", []):
+                if not raw.get("id"):
+                    continue
+                playlists.append(
+                    RemotePlaylist(
+                        name=raw.get("name") or "Untitled playlist",
+                        service_playlist_id=raw["id"],
+                        track_count=(raw.get("tracks") or {}).get("total"),
+                    )
+                )
+            response = self.client.next(response) if response.get("next") else None
+        return playlists
 
     def add_tracks(self, playlist_id: str, tracks: list[Track], dry_run: bool = True) -> list[Track]:
         ids = [track.spotify_id for track in tracks if track.spotify_id]

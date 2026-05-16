@@ -48,6 +48,12 @@ class PlaylistRef(BaseModel):
     youtube_music_id: str | None = None
 
 
+class RemotePlaylist(BaseModel):
+    name: str
+    service_playlist_id: str
+    track_count: int | None = None
+
+
 class PlaylistSnapshot(BaseModel):
     playlist_name: str
     service: Service
@@ -68,4 +74,3 @@ class PlaylistDiff(BaseModel):
     spotify_only: list[TrackMatch] = Field(default_factory=list)
     youtube_music_only: list[TrackMatch] = Field(default_factory=list)
     shared_count: int = 0
-

@@ -5,12 +5,12 @@ from pathlib import Path
 from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, Header, Input, Label, Log, Static
+from textual.widgets import Button, Footer, Header, Input, Label, Log, Select, Static
 
 from playlistgit.adapters import SpotifyAdapter, YouTubeMusicAdapter
 from playlistgit.config import init_config, load_config, resolve_path, save_config
 from playlistgit.matcher import score_tracks
-from playlistgit.models import PlaylistRef, PlaylistSnapshot, Service
+from playlistgit.models import PlaylistRef, PlaylistSnapshot, RemotePlaylist, Service
 from playlistgit.store import Store
 from playlistgit.sync import diff_snapshots
 
@@ -65,6 +65,8 @@ class PlaylistGitTUI(App):
         self.project_root = project_root or Path.cwd()
         init_config(self.project_root)
         self.config = load_config(self.project_root)
+        self.spotify_playlists: dict[str, RemotePlaylist] = {}
+        self.ytmusic_playlists: dict[str, RemotePlaylist] = {}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -86,12 +88,20 @@ class PlaylistGitTUI(App):
 
                 yield Static("Playlist Mapping", classes="panel")
                 first = self.config.playlists[0] if self.config.playlists else PlaylistRef(name="Main")
-                yield Label("Playlist Name")
+                yield Label("Sync Name")
                 yield Input(value=first.name, id="playlist_name")
-                yield Label("Spotify Playlist ID")
-                yield Input(value=first.spotify_id or "", id="spotify_playlist_id")
-                yield Label("YouTube Music Playlist ID")
-                yield Input(value=first.youtube_music_id or "", id="ytmusic_playlist_id")
+                yield Label("Spotify Playlist")
+                yield Select(
+                    self.initial_options(first.spotify_id, "Saved Spotify playlist"),
+                    id="spotify_playlist_select",
+                    allow_blank=True,
+                )
+                yield Label("YouTube Music Playlist")
+                yield Select(
+                    self.initial_options(first.youtube_music_id, "Saved YouTube Music playlist"),
+                    id="ytmusic_playlist_select",
+                    allow_blank=True,
+                )
 
                 with Horizontal():
                     yield Button("Save Setup", id="save", variant="primary")
@@ -99,6 +109,9 @@ class PlaylistGitTUI(App):
                 with Horizontal():
                     yield Button("Sign in Spotify", id="spotify_login")
                     yield Button("Check YouTube", id="ytmusic_login")
+                with Horizontal():
+                    yield Button("Load Spotify Playlists", id="load_spotify")
+                    yield Button("Load YouTube Playlists", id="load_ytmusic")
             with Vertical(id="right"):
                 yield Static("Sync", classes="panel")
                 with Horizontal():
@@ -109,7 +122,7 @@ class PlaylistGitTUI(App):
 
     def on_mount(self) -> None:
         self.write_log("Playlist Git is ready.")
-        self.write_log("Fill setup fields, save, run Doctor, then Preview Sync.")
+        self.write_log("Fill setup fields, load playlists, choose a pair, then Preview Sync.")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -121,6 +134,10 @@ class PlaylistGitTUI(App):
             self.check_spotify()
         elif button_id == "ytmusic_login":
             self.check_ytmusic()
+        elif button_id == "load_spotify":
+            self.load_spotify_playlists()
+        elif button_id == "load_ytmusic":
+            self.load_ytmusic_playlists()
         elif button_id == "preview":
             self.sync_worker(apply=False)
         elif button_id == "apply":
@@ -134,8 +151,8 @@ class PlaylistGitTUI(App):
             ("Spotify client secret", bool(cfg.spotify.client_secret)),
             ("Spotify redirect URI", bool(cfg.spotify.redirect_uri)),
             ("YouTube Music auth file", resolve_path(self.project_root, cfg.youtube_music.auth_file).exists()),
-            ("Spotify playlist ID", bool(self.current_playlist().spotify_id)),
-            ("YouTube Music playlist ID", bool(self.current_playlist().youtube_music_id)),
+            ("Spotify playlist selected", bool(self.current_playlist().spotify_id)),
+            ("YouTube Music playlist selected", bool(self.current_playlist().youtube_music_id)),
         ]
         for label, ok in checks:
             self.write_log(f"{'OK' if ok else 'MISSING'} - {label}")
@@ -155,8 +172,8 @@ class PlaylistGitTUI(App):
         cfg.playlists = [
             PlaylistRef(
                 name=self.input_value("playlist_name") or "Main",
-                spotify_id=self.input_value("spotify_playlist_id"),
-                youtube_music_id=self.input_value("ytmusic_playlist_id"),
+                spotify_id=self.select_value("spotify_playlist_select"),
+                youtube_music_id=self.select_value("ytmusic_playlist_select"),
             )
         ]
         save_config(self.project_root, cfg)
@@ -183,6 +200,31 @@ class PlaylistGitTUI(App):
             self.call_from_thread(self.write_log, "YouTube Music auth file loaded.")
         except Exception as exc:
             self.call_from_thread(self.write_log, f"YouTube Music check failed: {exc}")
+
+    @work(thread=True)
+    def load_spotify_playlists(self) -> None:
+        try:
+            self.save_form()
+            adapter = SpotifyAdapter(
+                self.config.spotify,
+                resolve_path(self.project_root, ".playlistgit/spotify_token_cache"),
+            )
+            playlists = adapter.list_playlists()
+            self.call_from_thread(self.set_playlist_options, "spotify_playlist_select", playlists)
+            self.call_from_thread(self.write_log, f"Loaded {len(playlists)} Spotify playlists.")
+        except Exception as exc:
+            self.call_from_thread(self.write_log, f"Could not load Spotify playlists: {exc}")
+
+    @work(thread=True)
+    def load_ytmusic_playlists(self) -> None:
+        try:
+            self.save_form()
+            adapter = YouTubeMusicAdapter(resolve_path(self.project_root, self.config.youtube_music.auth_file))
+            playlists = adapter.list_playlists()
+            self.call_from_thread(self.set_playlist_options, "ytmusic_playlist_select", playlists)
+            self.call_from_thread(self.write_log, f"Loaded {len(playlists)} YouTube Music playlists.")
+        except Exception as exc:
+            self.call_from_thread(self.write_log, f"Could not load YouTube Music playlists: {exc}")
 
     @work(thread=True)
     def sync_worker(self, apply: bool) -> None:
@@ -248,6 +290,32 @@ class PlaylistGitTUI(App):
 
     def input_value(self, widget_id: str) -> str:
         return self.query_one(f"#{widget_id}", Input).value.strip()
+
+    def select_value(self, widget_id: str) -> str:
+        value = self.query_one(f"#{widget_id}", Select).value
+        return "" if value == Select.BLANK else str(value)
+
+    def set_playlist_options(self, widget_id: str, playlists: list[RemotePlaylist]) -> None:
+        select = self.query_one(f"#{widget_id}", Select)
+        options = [(self.playlist_label(playlist), playlist.service_playlist_id) for playlist in playlists]
+        select.set_options(options)
+        current_id = (
+            self.current_playlist().spotify_id
+            if widget_id == "spotify_playlist_select"
+            else self.current_playlist().youtube_music_id
+        )
+        if current_id and current_id in {playlist.service_playlist_id for playlist in playlists}:
+            select.value = current_id
+
+    def initial_options(self, playlist_id: str | None, label: str) -> list[tuple[str, str]]:
+        if not playlist_id:
+            return []
+        return [(f"{label} ({playlist_id})", playlist_id)]
+
+    def playlist_label(self, playlist: RemotePlaylist) -> str:
+        if playlist.track_count is None:
+            return playlist.name
+        return f"{playlist.name} ({playlist.track_count} tracks)"
 
     def current_playlist(self) -> PlaylistRef:
         return self.config.playlists[0] if self.config.playlists else PlaylistRef(name="Main")

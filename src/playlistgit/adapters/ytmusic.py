@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ytmusicapi import YTMusic
 
-from playlistgit.models import Service, Track
+from playlistgit.models import RemotePlaylist, Service, Track
 
 
 class YouTubeMusicAdapter:
@@ -33,6 +33,21 @@ class YouTubeMusicAdapter:
                 )
             )
         return tracks
+
+    def list_playlists(self) -> list[RemotePlaylist]:
+        playlists: list[RemotePlaylist] = []
+        for raw in self.client.get_library_playlists(limit=None):
+            playlist_id = raw.get("playlistId")
+            if not playlist_id:
+                continue
+            playlists.append(
+                RemotePlaylist(
+                    name=raw.get("title") or "Untitled playlist",
+                    service_playlist_id=playlist_id,
+                    track_count=raw.get("count"),
+                )
+            )
+        return playlists
 
     def add_tracks(self, playlist_id: str, tracks: list[Track], dry_run: bool = True) -> list[Track]:
         ids = [track.youtube_music_id for track in tracks if track.youtube_music_id]
@@ -69,4 +84,3 @@ def _duration_to_ms(duration: str | None) -> int | None:
     for part in parts:
         seconds = seconds * 60 + part
     return seconds * 1000
-

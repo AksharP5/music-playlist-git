@@ -64,7 +64,6 @@ def doctor() -> None:
     cfg = load_config(root())
     checks = [
         ("Spotify client ID", bool(cfg.spotify.client_id)),
-        ("Spotify client secret", bool(cfg.spotify.client_secret)),
         ("Spotify redirect URI", bool(cfg.spotify.redirect_uri)),
         (
             "YouTube Music auth file",

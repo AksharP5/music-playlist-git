@@ -19,37 +19,74 @@ class PlaylistGitTUI(App):
     CSS = """
     Screen {
         layout: vertical;
+        background: #0f1218;
     }
 
     #body {
         height: 1fr;
+        padding: 1 2;
     }
 
-    .panel {
-        border: solid $accent;
-        padding: 1 2;
-        height: auto;
+    #left, #right {
+        padding: 0 1;
     }
 
     #left {
-        width: 42%;
+        width: 40%;
     }
 
     #right {
-        width: 58%;
+        width: 60%;
+    }
+
+    .hero {
+        text-style: bold;
+        color: #f4f7fb;
+        margin-bottom: 1;
+    }
+
+    .card {
+        background: #171c24;
+        border: round #313b4d;
+        padding: 1 2;
+        margin-bottom: 1;
+    }
+
+    .muted {
+        color: #9ba7b7;
+        margin-bottom: 1;
+    }
+
+    .section-title {
+        text-style: bold;
+        color: #dbe7ff;
+        margin-bottom: 1;
+    }
+
+    .advanced {
+        display: none;
     }
 
     Input {
         margin-bottom: 1;
+        border: tall #2d3748;
     }
 
     Button {
         margin-right: 1;
         margin-bottom: 1;
+        min-width: 18;
+    }
+
+    Select {
+        margin-bottom: 1;
     }
 
     #log {
         height: 1fr;
+        background: #171c24;
+        border: round #313b4d;
+        padding: 1;
     }
     """
 
@@ -72,57 +109,78 @@ class PlaylistGitTUI(App):
         yield Header(show_clock=True)
         with Horizontal(id="body"):
             with Vertical(id="left"):
-                yield Static("Setup", classes="panel")
-                yield Label("Spotify Client ID")
-                yield Input(value=self.config.spotify.client_id, id="spotify_client_id")
-                yield Label("Spotify Client Secret")
-                yield Input(
-                    value=self.config.spotify.client_secret,
-                    password=True,
-                    id="spotify_client_secret",
-                )
-                yield Label("Spotify Redirect URI")
-                yield Input(value=self.config.spotify.redirect_uri, id="spotify_redirect_uri")
-                yield Label("YouTube Music Auth File")
-                yield Input(value=self.config.youtube_music.auth_file, id="ytmusic_auth_file")
-
-                yield Static("Playlist Mapping", classes="panel")
-                first = self.config.playlists[0] if self.config.playlists else PlaylistRef(name="Main")
-                yield Label("Sync Name")
-                yield Input(value=first.name, id="playlist_name")
-                yield Label("Spotify Playlist")
-                yield Select(
-                    self.initial_options(first.spotify_id, "Saved Spotify playlist"),
-                    id="spotify_playlist_select",
-                    allow_blank=True,
-                )
-                yield Label("YouTube Music Playlist")
-                yield Select(
-                    self.initial_options(first.youtube_music_id, "Saved YouTube Music playlist"),
-                    id="ytmusic_playlist_select",
-                    allow_blank=True,
+                yield Static("Playlist Git", classes="hero")
+                yield Static(
+                    "Connect your music accounts, choose matching playlists, and sync additions.",
+                    classes="muted",
                 )
 
-                with Horizontal():
-                    yield Button("Save Setup", id="save", variant="primary")
-                    yield Button("Doctor", id="doctor")
-                with Horizontal():
-                    yield Button("Sign in Spotify", id="spotify_login")
-                    yield Button("Check YouTube", id="ytmusic_login")
-                with Horizontal():
-                    yield Button("Load Spotify Playlists", id="load_spotify")
-                    yield Button("Load YouTube Playlists", id="load_ytmusic")
+                yield Static("1. Connect Accounts", classes="section-title")
+                with Vertical(classes="card"):
+                    yield Static("Spotify", classes="section-title")
+                    yield Static(
+                        "Local dev needs a Spotify app client ID. A packaged app would hide this.",
+                        classes="muted",
+                    )
+                    yield Label("Spotify Client ID")
+                    yield Input(value=self.config.spotify.client_id, id="spotify_client_id")
+                    yield Input(
+                        value=self.config.spotify.client_secret,
+                        password=True,
+                        id="spotify_client_secret",
+                        classes="advanced",
+                    )
+                    yield Input(value=self.config.spotify.redirect_uri, id="spotify_redirect_uri", classes="advanced")
+                    yield Button("Connect Spotify", id="spotify_login", variant="primary")
+
+                with Vertical(classes="card"):
+                    yield Static("YouTube Music", classes="section-title")
+                    yield Static(
+                        "Use the local auth file for now. The desktop app should replace this with a guided login.",
+                        classes="muted",
+                    )
+                    yield Input(value=self.config.youtube_music.auth_file, id="ytmusic_auth_file")
+                    yield Button("Connect YouTube Music", id="ytmusic_login", variant="primary")
+
+                yield Static("2. Choose Playlists", classes="section-title")
+                with Vertical(classes="card"):
+                    first = self.config.playlists[0] if self.config.playlists else PlaylistRef(name="Main")
+                    yield Label("Sync Name")
+                    yield Input(value=first.name, id="playlist_name")
+                    yield Label("Spotify Playlist")
+                    yield Select(
+                        self.initial_options(first.spotify_id, "Saved Spotify playlist"),
+                        id="spotify_playlist_select",
+                        allow_blank=True,
+                    )
+                    yield Label("YouTube Music Playlist")
+                    yield Select(
+                        self.initial_options(first.youtube_music_id, "Saved YouTube Music playlist"),
+                        id="ytmusic_playlist_select",
+                        allow_blank=True,
+                    )
+                    with Horizontal():
+                        yield Button("Load Spotify", id="load_spotify")
+                        yield Button("Load YouTube", id="load_ytmusic")
+                    yield Button("Save Selection", id="save", variant="success")
+                yield Button("Check Setup", id="doctor")
             with Vertical(id="right"):
-                yield Static("Sync", classes="panel")
-                with Horizontal():
-                    yield Button("Preview Sync", id="preview", variant="primary")
-                    yield Button("Sync Now", id="apply", variant="success")
+                yield Static("3. Sync", classes="hero")
+                yield Static(
+                    "Preview shows what will be added. Sync Now writes only high-confidence additions.",
+                    classes="muted",
+                )
+                with Vertical(classes="card"):
+                    with Horizontal():
+                        yield Button("Preview Sync", id="preview", variant="primary")
+                        yield Button("Sync Now", id="apply", variant="success")
                 yield Log(id="log", highlight=True)
         yield Footer()
 
     def on_mount(self) -> None:
         self.write_log("Playlist Git is ready.")
-        self.write_log("Fill setup fields, load playlists, choose a pair, then Preview Sync.")
+        self.write_log("Start with Connect Spotify and Connect YouTube Music.")
+        self.write_log("For a normal-user release, these auth details should be bundled into a desktop app.")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -148,7 +206,6 @@ class PlaylistGitTUI(App):
         cfg = self.config
         checks = [
             ("Spotify client ID", bool(cfg.spotify.client_id)),
-            ("Spotify client secret", bool(cfg.spotify.client_secret)),
             ("Spotify redirect URI", bool(cfg.spotify.redirect_uri)),
             ("YouTube Music auth file", resolve_path(self.project_root, cfg.youtube_music.auth_file).exists()),
             ("Spotify playlist selected", bool(self.current_playlist().spotify_id)),
@@ -198,8 +255,12 @@ class PlaylistGitTUI(App):
             self.save_form()
             YouTubeMusicAdapter(resolve_path(self.project_root, self.config.youtube_music.auth_file))
             self.call_from_thread(self.write_log, "YouTube Music auth file loaded.")
-        except Exception as exc:
-            self.call_from_thread(self.write_log, f"YouTube Music check failed: {exc}")
+        except Exception:
+            self.call_from_thread(
+                self.write_log,
+                "YouTube Music needs a local auth file right now. "
+                "Run `ytmusicapi browser --file .playlistgit/headers_auth.json`, then try again.",
+            )
 
     @work(thread=True)
     def load_spotify_playlists(self) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyPKCE
 
 from playlistgit.config import SpotifyConfig
 from playlistgit.models import RemotePlaylist, Service, Track
@@ -14,17 +14,29 @@ SCOPES = "playlist-read-private playlist-read-collaborative playlist-modify-priv
 
 class SpotifyAdapter:
     def __init__(self, config: SpotifyConfig, cache_path: Path) -> None:
-        if not config.client_id or not config.client_secret:
-            raise ValueError("Spotify client_id/client_secret are required in .playlistgit/config.toml")
+        if not config.client_id:
+            raise ValueError(
+                "Spotify client ID is required for local development. "
+                "A packaged app can ship its own Spotify app client ID."
+            )
 
-        auth = SpotifyOAuth(
-            client_id=config.client_id,
-            client_secret=config.client_secret,
-            redirect_uri=config.redirect_uri,
-            scope=SCOPES,
-            cache_path=str(cache_path),
-            open_browser=True,
-        )
+        if config.client_secret:
+            auth = SpotifyOAuth(
+                client_id=config.client_id,
+                client_secret=config.client_secret,
+                redirect_uri=config.redirect_uri,
+                scope=SCOPES,
+                cache_path=str(cache_path),
+                open_browser=True,
+            )
+        else:
+            auth = SpotifyPKCE(
+                client_id=config.client_id,
+                redirect_uri=config.redirect_uri,
+                scope=SCOPES,
+                cache_path=str(cache_path),
+                open_browser=True,
+            )
         self.client = spotipy.Spotify(auth_manager=auth)
 
     def get_playlist_tracks(self, playlist_id: str) -> list[Track]:

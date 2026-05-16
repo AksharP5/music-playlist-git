@@ -73,12 +73,11 @@ Create a Spotify app at the Spotify developer dashboard. Set a redirect URI such
 http://127.0.0.1:8080/callback
 ```
 
-Then put these values in `.playlistgit/config.toml`:
+For local development, put your Spotify client ID in the app. Playlist Git uses Spotify PKCE, so a client secret is not required for the normal local flow.
 
 ```toml
 [spotify]
 client_id = "..."
-client_secret = "..."
 redirect_uri = "http://127.0.0.1:8080/callback"
 ```
 

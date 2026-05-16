@@ -57,6 +57,10 @@ class SpotifyAdapter:
                 response = None
         return tracks
 
+    def display_name(self) -> str:
+        profile = self.client.current_user()
+        return profile.get("display_name") or profile.get("id") or "Spotify user"
+
     def add_tracks(self, playlist_id: str, tracks: list[Track], dry_run: bool = True) -> list[Track]:
         ids = [track.spotify_id for track in tracks if track.spotify_id]
         if dry_run or not ids:
@@ -83,4 +87,3 @@ class SpotifyAdapter:
             spotify_id=raw["id"],
             source=Service.SPOTIFY,
         )
-

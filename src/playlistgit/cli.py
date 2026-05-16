@@ -51,6 +51,14 @@ def init() -> None:
 
 
 @app.command()
+def ui() -> None:
+    """Launch the interactive terminal app."""
+    from playlistgit.tui import run
+
+    run()
+
+
+@app.command()
 def doctor() -> None:
     """Check whether local setup is ready to sync."""
     cfg = load_config(root())
@@ -73,7 +81,7 @@ def doctor() -> None:
     console.print(table)
 
     if all(passed for _, passed in checks):
-        console.print("Ready. Run `playlistgit sync --dry-run` to preview changes.")
+        console.print("Ready. Run `playlistgit sync` to preview changes.")
     else:
         console.print("Fix missing items in `.playlistgit/config.toml` before syncing.")
 

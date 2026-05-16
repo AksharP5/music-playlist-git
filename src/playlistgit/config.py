@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from playlistgit.models import PlaylistRef
+from playlistgit.toml_writer import dump_config
 
 
 DEFAULT_CONFIG = """[sync]
@@ -73,9 +74,15 @@ def load_config(root: Path) -> AppConfig:
     return AppConfig.model_validate(data)
 
 
+def save_config(root: Path, config: AppConfig) -> Path:
+    path = config_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dump_config(config), encoding="utf-8")
+    return path
+
+
 def resolve_path(root: Path, raw_path: str) -> Path:
     path = Path(raw_path).expanduser()
     if path.is_absolute():
         return path
     return root / path
-

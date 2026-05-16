@@ -2,7 +2,7 @@
 
 Git-like playlist syncing for Spotify and YouTube Music.
 
-This is an early local CLI for people who want their playlists to survive switching music apps. It keeps local SQLite snapshots, compares Spotify and YouTube Music, and can add missing songs in both directions.
+This is an early local TUI/CLI for people who want their playlists to survive switching music apps. It keeps local SQLite snapshots, compares Spotify and YouTube Music, and can add missing songs in both directions.
 
 The first sync policy is intentionally conservative:
 
@@ -18,9 +18,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 playlistgit init
+playlistgit ui
 ```
 
-Then edit:
+The terminal app gives you fields for Spotify credentials, YouTube Music auth, playlist IDs, a setup checker, and sync buttons.
+
+You can also edit the config directly:
 
 ```text
 .playlistgit/config.toml
@@ -90,6 +93,14 @@ Save the generated file as:
 This auth method is unofficial because YouTube Music does not provide the same clean public playlist API that Spotify does.
 
 ## Usage
+
+Interactive app:
+
+```bash
+playlistgit ui
+```
+
+CLI commands:
 
 ```bash
 playlistgit status

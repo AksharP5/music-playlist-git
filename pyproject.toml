@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.8",
+  "platformdirs>=4.3",
   "rapidfuzz>=3.9",
   "rich>=13.7",
   "spotipy>=2.24",
@@ -23,9 +24,14 @@ dev = [
   "pytest>=8.2",
   "ruff>=0.5",
 ]
+desktop = [
+  "pyinstaller>=6.11",
+  "PySide6>=6.8",
+]
 
 [project.scripts]
 playlistgit = "playlistgit.cli:app"
+playlistgit-desktop = "playlistgit.desktop:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

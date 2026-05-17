@@ -59,6 +59,14 @@ def ui() -> None:
 
 
 @app.command()
+def desktop() -> None:
+    """Launch the desktop app."""
+    from playlistgit.desktop import main
+
+    main()
+
+
+@app.command()
 def doctor() -> None:
     """Check whether local setup is ready to sync."""
     cfg = load_config(root())

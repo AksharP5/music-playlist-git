@@ -3,17 +3,26 @@ from __future__ import annotations
 from pathlib import Path
 
 from ytmusicapi import YTMusic
+from ytmusicapi.auth.oauth import OAuthCredentials
 
 from playlistgit.models import RemotePlaylist, Service, Track
 
 
 class YouTubeMusicAdapter:
-    def __init__(self, auth_file: Path) -> None:
+    def __init__(
+        self,
+        auth_file: Path,
+        oauth_client_id: str | None = None,
+        oauth_client_secret: str | None = None,
+    ) -> None:
         if not auth_file.exists():
             raise FileNotFoundError(
                 f"Missing YouTube Music auth file at {auth_file}. Run `ytmusicapi browser` first."
             )
-        self.client = YTMusic(str(auth_file))
+        oauth_credentials = None
+        if oauth_client_id and oauth_client_secret:
+            oauth_credentials = OAuthCredentials(oauth_client_id, oauth_client_secret)
+        self.client = YTMusic(str(auth_file), oauth_credentials=oauth_credentials)
 
     def get_playlist_tracks(self, playlist_id: str) -> list[Track]:
         playlist = self.client.get_playlist(playlist_id, limit=None)

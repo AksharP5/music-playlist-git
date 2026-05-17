@@ -2,7 +2,7 @@
 
 Git-like playlist syncing for Spotify and YouTube Music.
 
-This is an early local TUI/CLI for people who want their playlists to survive switching music apps. It keeps local SQLite snapshots, compares Spotify and YouTube Music, and can add missing songs in both directions.
+This is an early local desktop/TUI/CLI app for people who want their playlists to survive switching music apps. It keeps local SQLite snapshots, compares Spotify and YouTube Music, and can add missing songs in both directions.
 
 The intended product experience is simple:
 
@@ -28,10 +28,16 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 playlistgit init
+playlistgit desktop
+```
+
+For the terminal UI:
+
+```bash
 playlistgit ui
 ```
 
-The terminal app gives you fields for Spotify credentials, YouTube Music auth, playlist dropdowns, a setup checker, and sync buttons.
+The desktop app is the intended normal-user surface. The terminal app remains available for development and power users.
 
 You can also edit the config directly:
 
